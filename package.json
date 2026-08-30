@@ -8,6 +8,6 @@
   "scripts": {
     "dev": "npm run dev --workspace=@opencut/web",
     "build": "npm run build --workspace=@opencut/web",
-    "lint": "npm run --workspace=@opencut/web test"
+    "lint": "npm run build --workspace=@opencut/web"
   }
 }

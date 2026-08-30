@@ -1,6 +1,6 @@
 {
   "name": "OpenCut",
-  "description": "Open-source video editing web application built with React and TanStack.",
-  "requestFramePermissions": [],
+  "description": "Editor de vídeo poderoso e responsivo para Android e Web com linha do tempo multitrilha, filtros, efeitos e exportação.",
+  "requestFramePermissions": ["camera", "microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

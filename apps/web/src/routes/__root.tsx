@@ -1,7 +1,6 @@
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { TanStackDevtools } from '@tanstack/react-devtools'
 import { TooltipProvider } from '../components/ui/tooltip'
+import { useEffect } from 'react'
 
 import appCss from '../styles.css?url'
 
@@ -13,17 +12,49 @@ export const Route = createRootRoute({
       },
       {
         name: 'viewport',
-        content: 'width=device-width, initial-scale=1',
+        content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover',
       },
       {
-        title: 'OpenCut rewrite | beta.opencut.app',
+        title: 'OpenCut - Editor de Vídeo',
+      },
+      {
+        name: 'description',
+        content: 'Editor de vídeo completo e open-source para Android e Web com linha do tempo multitrilha, efeitos e exportação.',
+      },
+      {
+        name: 'theme-color',
+        content: '#090d16',
+      },
+      {
+        name: 'mobile-web-app-capable',
+        content: 'yes',
+      },
+      {
+        name: 'apple-mobile-web-app-capable',
+        content: 'yes',
+      },
+      {
+        name: 'apple-mobile-web-app-status-bar-style',
+        content: 'black-translucent',
+      },
+      {
+        name: 'apple-mobile-web-app-title',
+        content: 'OpenCut',
       },
     ],
     links: [
       {
+        rel: 'manifest',
+        href: '/manifest.json',
+      },
+      {
         rel: 'icon',
-        href: '/favicon.ico',
-        type: 'image/x-icon',
+        href: '/icon.svg',
+        type: 'image/svg+xml',
+      },
+      {
+        rel: 'apple-touch-icon',
+        href: '/icon.svg',
       },
       {
         rel: 'preconnect',
@@ -36,7 +67,7 @@ export const Route = createRootRoute({
       },
       {
         rel: 'stylesheet',
-        href: 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400..900&display=swap',
+        href: 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap',
       },
       {
         rel: 'stylesheet',
@@ -48,26 +79,21 @@ export const Route = createRootRoute({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  }, [])
+
   return (
-    <html lang="en">
+    <html lang="pt-BR" className="dark bg-[#090d16] text-slate-100 antialiased selection:bg-sky-500/30 selection:text-sky-200">
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body className="min-h-screen bg-[#090d16] text-slate-100 overflow-x-hidden font-sans touch-manipulation">
         <TooltipProvider>
           {children}
         </TooltipProvider>
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-          ]}
-        />
         <Scripts />
       </body>
     </html>
