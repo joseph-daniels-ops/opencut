@@ -1,0 +1,6 @@
+{
+  "name": "OpenCut",
+  "description": "Open-source video editing web application built with React and TanStack.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

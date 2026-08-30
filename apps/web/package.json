@@ -6,11 +6,11 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "vite dev --port 5173",
+    "dev": "vite dev --port 3000 --host 0.0.0.0",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --port 3000 --host 0.0.0.0",
     "test": "vitest run",
-    "deploy": "bun run build && wrangler deploy"
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

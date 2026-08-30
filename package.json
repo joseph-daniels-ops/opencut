@@ -1,0 +1,13 @@
+{
+  "name": "opencut",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@opencut/web",
+    "build": "npm run build --workspace=@opencut/web",
+    "lint": "npm run --workspace=@opencut/web test"
+  }
+}
