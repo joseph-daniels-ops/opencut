@@ -59,6 +59,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
   const handleDownload = () => {
     if (!downloadUrl) return;
+    if (typeof window !== 'undefined' && (window as any).AndroidBridge) {
+      (window as any).AndroidBridge.showToast?.('Exportação concluída com sucesso!');
+      (window as any).AndroidBridge.vibrate?.(50);
+    }
     const a = document.createElement('a');
     a.href = downloadUrl;
     a.download = `${project.name.toLowerCase().replace(/\s+/g, '-')}-${resolution}.${format}`;
@@ -68,6 +72,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   };
 
   const handleShare = async () => {
+    if (typeof window !== 'undefined' && (window as any).AndroidBridge) {
+      (window as any).AndroidBridge.shareVideo?.(project.name, downloadUrl || window.location.href);
+      return;
+    }
     if (navigator.share) {
       try {
         await navigator.share({

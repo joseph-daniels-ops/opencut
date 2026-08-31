@@ -196,6 +196,9 @@ function EditorPage() {
 
       setSelectedClipId(clip2.id);
       setSelectedType('video');
+      if (typeof window !== 'undefined' && (window as any).AndroidBridge) {
+        (window as any).AndroidBridge.vibrate?.(35);
+      }
       return;
     }
 

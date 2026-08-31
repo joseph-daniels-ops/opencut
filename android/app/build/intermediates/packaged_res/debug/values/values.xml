@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OpenCut</string>
+    <style name="Theme.OpenCut" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:statusBarColor">#090D16</item>
+        <item name="android:navigationBarColor">#090D16</item>
+        <item name="android:windowBackground">#090D16</item>
+    </style>
+</resources>

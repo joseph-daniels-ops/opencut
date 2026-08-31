@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "npm run dev --workspace=@opencut/web",
     "build": "npm run build --workspace=@opencut/web",
+    "build:android": "npm run build --workspace=@opencut/web && cp -r apps/web/public/* android/app/src/main/assets/public/",
     "lint": "npm run build --workspace=@opencut/web"
   }
 }
