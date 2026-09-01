@@ -3,23 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>OpenCut Pro 150MB — CapCut & Meta Edits Level</title>
+    <title>OpenCut — Editor de Vídeo Mobile</title>
     
-    <!-- PWA & Android Meta Tags -->
-    <meta name="theme-color" content="#04060A">
+    <meta name="theme-color" content="#090D16">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
-    <link rel="icon" type="image/svg+xml" href="icon.svg">
-    <link rel="manifest" href="manifest.json">
-
-    <!-- Tipografia de Alta Performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
-    <!-- Tailwind CSS CDN -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -28,421 +21,251 @@
                 extend: {
                     colors: {
                         brand: {
-                            void: '#04060A',
                             bg: '#090D16',
                             card: '#101622',
                             surface: '#161E2E',
-                            border: '#1A2332',
+                            border: '#1E293B',
                             primary: '#00F2FE',
-                            yellow: '#FFD700',
-                            amber: '#FFB703',
-                            purple: '#9D4EDD',
-                            emerald: '#05FFA1',
-                            crimson: '#FF2A6D'
+                            yellow: '#FACC15',
+                            red: '#F43F5E'
                         }
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
-                        mono: ['"JetBrains Mono"', 'monospace'],
-                        display: ['Montserrat', 'sans-serif']
+                        mono: ['"JetBrains Mono"', 'monospace']
                     }
                 }
             }
         }
     </script>
     
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@0.474.0/dist/umd/lucide.js"></script>
 
     <style>
         * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-        body { 
-            background-color: #04060A; 
-            color: #F1F5F9; 
+        html, body {
+            margin: 0;
+            padding: 0;
+            background-color: #090D16;
+            color: #F8FAFC;
             font-family: 'Inter', sans-serif;
             user-select: none;
-            touch-action: pan-y;
-            overflow-x: hidden;
+            overflow: hidden;
             height: 100vh;
             height: 100dvh;
+            touch-action: pan-y;
         }
 
-        .aspect-9-16 { aspect-ratio: 9/16; }
-        .aspect-16-9 { aspect-ratio: 16/9; }
-        .aspect-1-1 { aspect-ratio: 1/1; }
-        .aspect-4-5 { aspect-ratio: 4/5; }
-
-        .timeline-scroll::-webkit-scrollbar { height: 4px; }
-        .timeline-scroll::-webkit-scrollbar-thumb { background: #2E3D56; border-radius: 4px; }
-
-        /* CapCut Trim Handle Styling */
+        /* Alças de Trim Gigantes para Polegar (40px de largura com hit-box generosa) */
         .trim-handle {
             touch-action: none;
-            width: 18px;
-            background: #FFD700;
+            width: 32px;
+            background: #FACC15;
             cursor: ew-resize;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 10;
+            z-index: 20;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(250, 204, 21, 0.4);
         }
         .trim-handle::after {
             content: '';
-            width: 3px;
-            height: 14px;
+            width: 4px;
+            height: 20px;
             background: #090D16;
             border-radius: 2px;
         }
 
-        /* Glass Header */
-        .glass-header {
-            background: rgba(9, 13, 22, 0.92);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-        }
+        .timeline-scroll::-webkit-scrollbar { height: 4px; }
+        .timeline-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
 
-        /* Drawer Transition */
         .drawer-slide {
             transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
     </style>
 </head>
-<body class="flex flex-col justify-between antialiased">
+<body class="flex flex-col h-full justify-between">
 
-    <div id="app" class="flex flex-col h-full justify-between relative overflow-hidden">
+    <!-- 1. HEADER SIMPLES & DIRETO -->
+    <header class="h-14 shrink-0 bg-slate-900/95 border-b border-slate-800 px-4 flex items-center justify-between z-30">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-cyan-400 text-slate-950 flex items-center justify-center font-black">
+                <i data-lucide="scissors" class="w-4 h-4 text-slate-950"></i>
+            </div>
+            <div>
+                <span class="font-extrabold text-sm text-white tracking-wide">OPENCUT</span>
+                <p id="timeline-time-display" class="text-[11px] text-cyan-400 font-mono font-bold leading-none">00:00.0 / 00:00.0</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button id="btn-aspect" class="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-cyan-300 font-mono text-xs font-bold active:scale-95 transition-all">
+                9:16
+            </button>
+            <button id="btn-export-modal" class="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-cyan-400 to-sky-500 hover:from-cyan-300 hover:to-sky-400 text-slate-950 text-xs font-black shadow-lg shadow-cyan-500/20 active:scale-95 transition-all">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>Exportar</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- 2. PLAYER DE VÍDEO (Com Scrubbing Tátil no Canvas) -->
+    <main class="flex-1 flex flex-col justify-between max-w-lg mx-auto w-full p-2.5 gap-2 overflow-hidden">
         
-        <!-- 1. TOP HEADER (Obsidian Slate 120Hz) -->
-        <header class="h-14 shrink-0 border-b border-slate-800 px-3.5 flex items-center justify-between glass-header sticky top-0 z-40">
-            <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-400 via-sky-500 to-indigo-600 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-cyan-500/25">
-                    <i data-lucide="scissors" class="w-4 h-4 text-slate-950"></i>
-                </div>
-                <div>
-                    <div class="flex items-center gap-1.5">
-                        <span class="font-black text-sm text-white tracking-tight leading-none font-display">OPENCUT</span>
-                        <span class="px-1.5 py-0.5 rounded-full bg-cyan-400/10 border border-cyan-400/30 text-cyan-400 text-[9px] font-bold font-mono">
-                            PRO 150MB
-                        </span>
-                    </div>
-                    <p class="text-[10px] text-slate-400 font-mono" id="timeline-time-display">00:00.0 / 00:00.0</p>
-                </div>
-            </div>
-
-            <!-- Header Actions -->
-            <div class="flex items-center gap-2">
-                <button id="btn-undo" class="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 active:scale-95 transition-all">
-                    <i data-lucide="undo-2" class="w-3.5 h-3.5"></i>
-                </button>
-                <button id="btn-aspect" class="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-cyan-400 font-mono text-xs font-bold active:scale-95 transition-all">
-                    9:16
-                </button>
-                <button id="btn-export-modal" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-400 via-sky-500 to-indigo-600 hover:from-cyan-300 hover:to-indigo-500 text-slate-950 text-xs font-black shadow-lg shadow-cyan-500/25 active:scale-95 transition-all">
-                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                    <span>Exportar</span>
-                </button>
-            </div>
-        </header>
-
-        <!-- 2. WORKSPACE PREVIEW (Scrubbing Tátil no Canvas) -->
-        <main class="flex-1 flex flex-col justify-between max-w-lg mx-auto w-full p-2.5 gap-2 overflow-hidden">
+        <div id="canvas-touch-area" class="relative w-full flex-1 min-h-[220px] bg-black rounded-2xl border border-slate-800 overflow-hidden flex items-center justify-center shadow-2xl touch-none">
             
-            <div id="canvas-touch-area" class="relative w-full flex-1 min-h-[220px] bg-black rounded-2xl border border-slate-800/90 overflow-hidden flex items-center justify-center shadow-2xl touch-none">
-                
-                <div id="video-wrapper" class="aspect-9-16 h-full max-h-[305px] relative bg-black rounded-xl overflow-hidden shadow-2xl flex items-center justify-center pointer-events-none">
-                    <video id="hidden-video-player" playsinline preload="auto" class="hidden"></video>
-                    <canvas id="preview-canvas" class="w-full h-full object-contain"></canvas>
+            <div id="video-wrapper" class="aspect-[9/16] h-full max-h-[300px] relative bg-black rounded-xl overflow-hidden flex items-center justify-center pointer-events-none">
+                <video id="hidden-video-player" playsinline preload="auto" class="hidden"></video>
+                <canvas id="preview-canvas" class="w-full h-full object-contain"></canvas>
 
-                    <!-- Status / Scrubbing Hint -->
-                    <div class="absolute top-2 right-2 px-2.5 py-0.5 rounded-full bg-black/70 backdrop-blur-md text-[9px] font-mono text-slate-300 flex items-center gap-1.5 border border-white/10">
-                        <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-                        <span id="engine-status-badge">Toque & Arraste no Vídeo</span>
-                    </div>
-
-                    <!-- Empty State -->
-                    <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-3 bg-slate-950/95 z-20 pointer-events-auto">
-                        <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center shadow-lg shadow-cyan-500/15">
-                            <i data-lucide="video" class="w-6 h-6"></i>
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-sm text-white">Criar Novo Projeto</h3>
-                            <p class="text-xs text-slate-400 mt-1 max-w-[210px]">Importe um vídeo para ativar alças de trim, filtros e corte em tempo real</p>
-                        </div>
-                        <button id="btn-import-first" class="px-4 py-2.5 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black text-xs shadow-lg shadow-cyan-500/25 active:scale-95 transition-all flex items-center gap-1.5">
-                            <i data-lucide="folder-plus" class="w-4 h-4"></i>
-                            <span>Importar Vídeo</span>
-                        </button>
-                    </div>
+                <!-- Status de Scrubbing / Ajuda -->
+                <div class="absolute top-2 right-2 px-3 py-1 rounded-full bg-black/80 backdrop-blur-md text-[10px] font-mono text-cyan-300 flex items-center gap-1.5 border border-cyan-500/30">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                    <span id="engine-status-badge">Arraste no vídeo para buscar</span>
                 </div>
 
-                <!-- Floating Play/Pause Button -->
-                <button id="btn-play-pause" class="absolute bottom-3 right-3 w-11 h-11 rounded-full bg-cyan-400 hover:bg-cyan-300 text-slate-950 flex items-center justify-center shadow-lg shadow-cyan-500/35 active:scale-90 transition-transform z-30 pointer-events-auto">
-                    <i id="play-icon" data-lucide="play" class="w-5 h-5 ml-0.5 fill-slate-950"></i>
-                </button>
+                <!-- Empty State (Quando não há vídeo) -->
+                <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-3 bg-slate-950/95 z-20 pointer-events-auto">
+                    <div class="w-14 h-14 rounded-2xl bg-cyan-400/10 text-cyan-400 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                        <i data-lucide="video" class="w-7 h-7"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base text-white">Nenhum Vídeo Aberto</h3>
+                        <p class="text-xs text-slate-400 mt-1 max-w-[220px]">Toque abaixo para escolher um vídeo da sua galeria e começar a cortar</p>
+                    </div>
+                    <button id="btn-import-first" class="px-5 py-3 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-black text-xs shadow-lg shadow-cyan-500/30 active:scale-95 transition-all flex items-center gap-2">
+                        <i data-lucide="folder-plus" class="w-4 h-4"></i>
+                        <span>Escolher Vídeo da Galeria</span>
+                    </button>
+                </div>
             </div>
 
-            <!-- 3. MULTITRACK TIMELINE COM TRIM HANDLES ARRASTÁVEIS -->
-            <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-2.5 space-y-2 shadow-xl shrink-0">
-                
-                <!-- Quick Tools Bar -->
-                <div class="flex items-center justify-between px-1">
-                    <div class="flex items-center gap-1.5">
-                        <button id="btn-split" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold active:scale-95 transition-all">
-                            <i data-lucide="scissors" class="w-3.5 h-3.5 text-sky-400"></i>
-                            <span>Dividir</span>
-                        </button>
-                        <button id="btn-keyframe" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 text-xs font-bold active:scale-95 transition-all">
-                            <i data-lucide="diamond" class="w-3.5 h-3.5 text-cyan-400"></i>
-                            <span>Keyframe</span>
-                        </button>
-                        <button id="btn-freeze" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold active:scale-95 transition-all">
-                            <i data-lucide="snowflake" class="w-3.5 h-3.5 text-cyan-300"></i>
-                            <span>Congelar 3s</span>
-                        </button>
-                        <button id="btn-speed" class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold active:scale-95 transition-all">
-                            <i data-lucide="gauge" class="w-3.5 h-3.5 text-amber-400"></i>
-                            <span id="speed-label">1.0x</span>
-                        </button>
-                    </div>
+            <!-- Botão Flutuante de Play/Pause -->
+            <button id="btn-play-pause" class="absolute bottom-3 right-3 w-12 h-12 rounded-full bg-cyan-400 hover:bg-cyan-300 text-slate-950 flex items-center justify-center shadow-lg shadow-cyan-500/40 active:scale-90 transition-transform z-30 pointer-events-auto">
+                <i id="play-icon" data-lucide="play" class="w-6 h-6 ml-0.5 fill-slate-950"></i>
+            </button>
+        </div>
 
-                    <button id="btn-add-media" class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cyan-400/15 border border-cyan-400/30 hover:bg-cyan-400/25 text-cyan-300 text-xs font-bold active:scale-95 transition-all">
-                        <i data-lucide="plus" class="w-3.5 h-3.5 text-cyan-400"></i>
-                        <span>+ Mídia</span>
+        <!-- 3. TIMELINE MOBILE COM ALÇAS DE TRIM GIGANTES -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-2.5 space-y-2 shadow-xl shrink-0">
+            
+            <!-- Barra de Ferramentas Rápidas (Dividir, Filtro, Adicionar) -->
+            <div class="flex items-center justify-between px-1">
+                <div class="flex items-center gap-2">
+                    <button id="btn-split" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold active:scale-95 transition-all border border-slate-700">
+                        <i data-lucide="scissors" class="w-4 h-4 text-cyan-400"></i>
+                        <span>Dividir</span>
                     </button>
-                </div>
-
-                <!-- Timeline Tracks Container -->
-                <div class="relative bg-slate-950/90 rounded-xl border border-slate-800/80 p-2 overflow-hidden">
-                    
-                    <!-- Timeline Ruler with Beat Markers -->
-                    <div id="timeline-ruler" class="h-4 border-b border-slate-800 flex items-center justify-between text-[9px] font-mono text-slate-500 px-1 mb-1.5 relative">
-                        <span>00:00</span>
-                        <span>00:05</span>
-                        <span>00:10</span>
-                        <span>00:15</span>
-                        <div class="absolute left-1/4 top-1 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400"></div>
-                        <div class="absolute left-2/4 top-1 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400"></div>
-                        <div class="absolute left-3/4 top-1 w-1.5 h-1.5 rounded-full bg-amber-400 shadow-sm shadow-amber-400"></div>
-                    </div>
-
-                    <div class="space-y-1.5">
-                        <!-- Video Main Track com Alças Amarelas de Trim -->
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-[10px] font-bold text-cyan-400 w-10 flex items-center gap-1">
-                                <i data-lucide="video" class="w-3 h-3"></i> Vídeo
-                            </span>
-                            <div id="video-track-container" class="flex-1 flex gap-1 h-12 overflow-x-auto timeline-scroll relative items-center"></div>
-                        </div>
-
-                        <!-- Audio Waveform Live Track -->
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-[10px] font-bold text-emerald-400 w-10 flex items-center gap-1">
-                                <i data-lucide="music" class="w-3 h-3"></i> Áudio
-                            </span>
-                            <div id="audio-track-box" class="flex-1 h-6 bg-gradient-to-r from-emerald-950/40 via-teal-950/40 to-cyan-950/40 border border-emerald-800/40 rounded-md flex items-center px-2 text-[9px] font-mono text-emerald-300 truncate">
-                                🎵 Master (3-Band EQ • Noise Gate • Limiter)
-                            </div>
-                        </div>
-
-                        <!-- Subtitles / Text Track -->
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-[10px] font-bold text-amber-400 w-10 flex items-center gap-1">
-                                <i data-lucide="type" class="w-3 h-3"></i> Texto
-                            </span>
-                            <div id="text-track-box" class="flex-1 h-6 bg-amber-950/30 border border-amber-800/30 rounded-md flex items-center px-2 text-[9px] font-mono text-amber-300 truncate">
-                                (Sem legenda aplicada)
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Scrubber Slider -->
-                    <div class="mt-2 pt-1 border-t border-slate-800/60">
-                        <input id="timeline-slider" type="range" min="0" max="10" step="0.05" value="0" class="w-full accent-cyan-400 bg-slate-800 h-1.5 rounded-lg cursor-pointer">
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- 4. ACTIONS DRAWER (CapCut Quick Menu) -->
-            <div id="actions-drawer" class="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-2 shrink-0">
-                <div class="flex items-center gap-1.5 overflow-x-auto timeline-scroll py-0.5">
-                    <button id="btn-open-filters" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold shrink-0 active:scale-95 transition-all">
-                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
-                        <span id="drawer-filter-label">Filtros & LUTs 3D</span>
+                    <button id="btn-open-filters" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold active:scale-95 transition-all border border-slate-700">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-yellow-400"></i>
+                        <span>Filtros</span>
                     </button>
-                    <button id="btn-open-voicefx" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold shrink-0 active:scale-95 transition-all">
-                        <i data-lucide="mic" class="w-3.5 h-3.5 text-indigo-400"></i>
-                        <span id="drawer-voicefx-label">Efeitos de Voz</span>
-                    </button>
-                    <button id="drawer-btn-chroma" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold shrink-0 active:scale-95 transition-all">
-                        <i data-lucide="wand-2" class="w-3.5 h-3.5 text-emerald-400"></i>
-                        <span id="drawer-chroma-label">Chroma Key</span>
-                    </button>
-                    <button id="drawer-btn-volume" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold shrink-0 active:scale-95 transition-all">
-                        <i data-lucide="volume-2" class="w-3.5 h-3.5 text-cyan-400"></i>
-                        <span id="drawer-volume-label">Volume: 100%</span>
-                    </button>
-                    <button id="drawer-btn-fade" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold shrink-0 active:scale-95 transition-all">
-                        <i data-lucide="activity" class="w-3.5 h-3.5 text-teal-400"></i>
-                        <span id="drawer-fade-label">Fade: Desligado</span>
-                    </button>
-                    <button id="drawer-btn-text" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold shrink-0 active:scale-95 transition-all">
-                        <i data-lucide="type" class="w-3.5 h-3.5 text-amber-400"></i>
-                        <span>Legenda</span>
-                    </button>
-                    <button id="drawer-btn-delete" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 text-rose-300 text-xs font-semibold shrink-0 active:scale-95 transition-all">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-400"></i>
+                    <button id="btn-delete-clip" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-bold active:scale-95 transition-all border border-rose-500/30">
+                        <i data-lucide="trash-2" class="w-4 h-4 text-rose-400"></i>
                         <span>Excluir</span>
                     </button>
                 </div>
+
+                <button id="btn-add-media" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-400/15 border border-cyan-400/40 hover:bg-cyan-400/25 text-cyan-300 text-xs font-black active:scale-95 transition-all">
+                    <i data-lucide="plus" class="w-4 h-4 text-cyan-400"></i>
+                    <span>+ Adicionar</span>
+                </button>
             </div>
 
-        </main>
-    </div>
+            <!-- Faixa da Timeline (Onde ficam os blocos de vídeo) -->
+            <div class="relative bg-slate-950 rounded-xl border border-slate-800 p-2 overflow-hidden">
+                <div class="flex items-center gap-2">
+                    <span class="text-[11px] font-bold text-cyan-400 w-10 flex items-center gap-1 shrink-0">
+                        <i data-lucide="video" class="w-3.5 h-3.5"></i> Vídeo
+                    </span>
+                    <div id="video-track-container" class="flex-1 flex gap-2 h-14 overflow-x-auto timeline-scroll relative items-center py-1"></div>
+                </div>
 
-    <!-- 5. GAVETA VISUAL DE FILTROS & LUTS COM THUMBNAILS (Visual Sheet) -->
-    <div id="filters-sheet" class="fixed inset-x-0 bottom-0 z-50 bg-slate-900/98 border-t border-slate-800 rounded-t-3xl p-4 space-y-3 shadow-2xl transform translate-y-full drawer-slide">
+                <!-- Slider Geral da Timeline -->
+                <div class="mt-2 pt-1.5 border-t border-slate-800/80">
+                    <input id="timeline-slider" type="range" min="0" max="10" step="0.05" value="0" class="w-full accent-cyan-400 bg-slate-800 h-2 rounded-lg cursor-pointer">
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 4. GAVETA VISUAL DE FILTROS (Com Cards Reais) -->
+    <div id="filters-sheet" class="fixed inset-x-0 bottom-0 z-50 bg-slate-900 border-t border-slate-800 rounded-t-3xl p-4 space-y-3 shadow-2xl transform translate-y-full drawer-slide">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-                <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
-                <h4 class="text-sm font-bold text-white font-display">Galeria de Filtros & LUTs 3D</h4>
+                <i data-lucide="sparkles" class="w-4 h-4 text-yellow-400"></i>
+                <h4 class="text-sm font-bold text-white">Escolha um Filtro de Cor</h4>
             </div>
-            <button id="close-filters-sheet" class="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white">
+            <button id="close-filters-sheet" class="p-1.5 rounded-lg bg-slate-800 text-slate-300">
                 <i data-lucide="x" class="w-4 h-4"></i>
             </button>
         </div>
 
-        <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 overflow-y-auto max-h-48 py-1">
-            <div data-filter="filter-none" class="filter-card p-2 rounded-xl bg-slate-800 border-2 border-cyan-400 flex flex-col items-center gap-1 cursor-pointer active:scale-95 transition-all">
-                <div class="w-full h-12 rounded-lg bg-slate-700 flex items-center justify-center text-[10px] font-mono text-slate-300">Original</div>
-                <span class="text-[10px] font-bold text-white truncate">Normal</span>
+        <div class="grid grid-cols-3 sm:grid-cols-6 gap-2.5 overflow-y-auto max-h-52 py-1">
+            <div data-filter="filter-none" class="filter-card p-2 rounded-xl bg-slate-800 border-2 border-cyan-400 flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-all">
+                <div class="w-full h-12 rounded-lg bg-slate-700 flex items-center justify-center text-xs font-mono text-slate-300">Original</div>
+                <span class="text-xs font-bold text-white">Normal</span>
             </div>
-            <div data-filter="filter-cinematic" class="filter-card p-2 rounded-xl bg-slate-800 border-2 border-transparent flex flex-col items-center gap-1 cursor-pointer active:scale-95 transition-all">
-                <div class="w-full h-12 rounded-lg bg-gradient-to-tr from-amber-600 to-teal-500 flex items-center justify-center text-[10px] font-bold text-white shadow-inner">Teal/Orange</div>
-                <span class="text-[10px] font-bold text-white truncate">Cinemático</span>
+            <div data-filter="filter-cinematic" class="filter-card p-2 rounded-xl bg-slate-800 border-2 border-transparent flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-all">
+                <div class="w-full h-12 rounded-lg bg-gradient-to-tr from-amber-600 to-teal-500 flex items-center justify-center text-xs font-bold text-white shadow-inner">Teal/Orange</div>
+                <span class="text-xs font-bold text-white">Cinemático</span>
             </div>
-            <div data-filter="filter-cyberpunk" class="filter-card p-2 rounded-xl bg-slate-800 border-2 border-transparent flex flex-col items-center gap-1 cursor-pointer active:scale-95 transition-all">
-                <div class="w-full h-12 rounded-lg bg-gradient-to-tr from-fuchsia-600 to-cyan-500 flex items-center justify-center text-[10px] font-bold text-white shadow-inner">Neon</div>
-                <span class="text-[10px] font-bold text-white truncate">Cyberpunk</span>
+            <div data-filter="filter-cyberpunk" class="filter-card p-2 rounded-xl bg-slate-800 border-2 border-transparent flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-all">
+                <div class="w-full h-12 rounded-lg bg-gradient-to-tr from-fuchsia-600 to-cyan-500 flex items-center justify-center text-xs font-bold text-white shadow-inner">Neon</div>
+                <span class="text-xs font-bold text-white">Cyberpunk</span>
             </div>
-            <div data-filter="filter-vintage" class="filter-card p-2 rounded-xl bg-slate-800 border-2 border-transparent flex flex-col items-center gap-1 cursor-pointer active:scale-95 transition-all">
-                <div class="w-full h-12 rounded-lg bg-gradient-to-tr from-amber-800 to-yellow-600 flex items-center justify-center text-[10px] font-bold text-white shadow-inner">Retro</div>
-                <span class="text-[10px] font-bold text-white truncate">VHS 90s</span>
+            <div data-filter="filter-vintage" class="filter-card p-2 rounded-xl bg-slate-800 border-2 border-transparent flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-all">
+                <div class="w-full h-12 rounded-lg bg-gradient-to-tr from-amber-800 to-yellow-600 flex items-center justify-center text-xs font-bold text-white shadow-inner">Retro</div>
+                <span class="text-xs font-bold text-white">VHS 90s</span>
             </div>
-            <div data-filter="filter-vibrant" class="filter-card p-2 rounded-xl bg-slate-800 border-2 border-transparent flex flex-col items-center gap-1 cursor-pointer active:scale-95 transition-all">
-                <div class="w-full h-12 rounded-lg bg-gradient-to-tr from-emerald-500 to-sky-500 flex items-center justify-center text-[10px] font-bold text-white shadow-inner">Vívido</div>
-                <span class="text-[10px] font-bold text-white truncate">Vibrante</span>
+            <div data-filter="filter-vibrant" class="filter-card p-2 rounded-xl bg-slate-800 border-2 border-transparent flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-all">
+                <div class="w-full h-12 rounded-lg bg-gradient-to-tr from-emerald-500 to-sky-500 flex items-center justify-center text-xs font-bold text-white shadow-inner">Vívido</div>
+                <span class="text-xs font-bold text-white">Vibrante</span>
             </div>
-            <div data-filter="filter-bw" class="filter-card p-2 rounded-xl bg-slate-800 border-2 border-transparent flex flex-col items-center gap-1 cursor-pointer active:scale-95 transition-all">
-                <div class="w-full h-12 rounded-lg bg-gradient-to-tr from-black to-slate-400 flex items-center justify-center text-[10px] font-bold text-white shadow-inner">P&B</div>
-                <span class="text-[10px] font-bold text-white truncate">Noir Contrast</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- 6. GAVETA VISUAL DE EFEITOS DE VOZ (Voice FX Sheet) -->
-    <div id="voicefx-sheet" class="fixed inset-x-0 bottom-0 z-50 bg-slate-900/98 border-t border-slate-800 rounded-t-3xl p-4 space-y-3 shadow-2xl transform translate-y-full drawer-slide">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <i data-lucide="mic" class="w-4 h-4 text-indigo-400"></i>
-                <h4 class="text-sm font-bold text-white font-display">Moduladores de Voz DSP</h4>
-            </div>
-            <button id="close-voicefx-sheet" class="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white">
-                <i data-lucide="x" class="w-4 h-4"></i>
-            </button>
-        </div>
-
-        <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
-            <div data-voice="none" class="voice-card p-2.5 rounded-xl bg-slate-800 border-2 border-cyan-400 flex flex-col items-center gap-1 cursor-pointer active:scale-95 transition-all">
-                <i data-lucide="user" class="w-5 h-5 text-slate-300"></i>
-                <span class="text-[10px] font-bold text-white">Original</span>
-            </div>
-            <div data-voice="deep" class="voice-card p-2.5 rounded-xl bg-slate-800 border-2 border-transparent flex flex-col items-center gap-1 cursor-pointer active:scale-95 transition-all">
-                <i data-lucide="volume-x" class="w-5 h-5 text-indigo-400"></i>
-                <span class="text-[10px] font-bold text-white">Voz Grossa</span>
-            </div>
-            <div data-voice="chipmunk" class="voice-card p-2.5 rounded-xl bg-slate-800 border-2 border-transparent flex flex-col items-center gap-1 cursor-pointer active:scale-95 transition-all">
-                <i data-lucide="smile" class="w-5 h-5 text-amber-400"></i>
-                <span class="text-[10px] font-bold text-white">Esquilo</span>
-            </div>
-            <div data-voice="robot" class="voice-card p-2.5 rounded-xl bg-slate-800 border-2 border-transparent flex flex-col items-center gap-1 cursor-pointer active:scale-95 transition-all">
-                <i data-lucide="cpu" class="w-5 h-5 text-emerald-400"></i>
-                <span class="text-[10px] font-bold text-white">Robô</span>
-            </div>
-            <div data-voice="echo" class="voice-card p-2.5 rounded-xl bg-slate-800 border-2 border-transparent flex flex-col items-center gap-1 cursor-pointer active:scale-95 transition-all">
-                <i data-lucide="radio" class="w-5 h-5 text-sky-400"></i>
-                <span class="text-[10px] font-bold text-white">Eco Espacial</span>
-            </div>
-            <div data-voice="megaphone" class="voice-card p-2.5 rounded-xl bg-slate-800 border-2 border-transparent flex flex-col items-center gap-1 cursor-pointer active:scale-95 transition-all">
-                <i data-lucide="megaphone" class="w-5 h-5 text-rose-400"></i>
-                <span class="text-[10px] font-bold text-white">Megafone</span>
+            <div data-filter="filter-bw" class="filter-card p-2 rounded-xl bg-slate-800 border-2 border-transparent flex flex-col items-center gap-1.5 cursor-pointer active:scale-95 transition-all">
+                <div class="w-full h-12 rounded-lg bg-gradient-to-tr from-black to-slate-400 flex items-center justify-center text-xs font-bold text-white shadow-inner">P&B</div>
+                <span class="text-xs font-bold text-white">Preto & Branco</span>
             </div>
         </div>
     </div>
 
-    <!-- 7. MODAL DE EXPORTAÇÃO DETERMINÍSTICA ATÉ 4K 60FPS -->
-    <div id="export-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <!-- 5. MODAL DE EXPORTAÇÃO -->
+    <div id="export-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <div class="w-8 h-8 rounded-xl bg-cyan-400/10 text-cyan-400 flex items-center justify-center">
                         <i data-lucide="download" class="w-4 h-4"></i>
                     </div>
-                    <h3 class="font-bold text-base text-white">Exportar Vídeo MP4</h3>
+                    <h3 class="font-bold text-base text-white">Salvar Vídeo MP4</h3>
                 </div>
                 <button id="close-export-modal" class="p-1 text-slate-400 hover:text-white rounded-lg">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
 
-            <!-- Progress Indicator with Real-Time ETA -->
             <div id="export-progress-box" class="hidden space-y-2">
                 <div class="flex justify-between text-xs font-mono text-cyan-300">
-                    <span id="export-status-label">Renderizando Frame-a-Frame...</span>
+                    <span>Renderizando Vídeo...</span>
                     <span id="export-progress-text">0%</span>
                 </div>
-                <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                    <div id="export-progress-bar" class="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 w-0 transition-all duration-150"></div>
-                </div>
-                <p id="export-eta-text" class="text-[10px] text-slate-400 font-mono text-right">Tempo estimado: calculando...</p>
-            </div>
-
-            <!-- Export Options -->
-            <div id="export-options-box" class="space-y-3 text-xs">
-                <div>
-                    <label class="text-slate-400 font-semibold block mb-1">Resolução do Vídeo</label>
-                    <select id="export-resolution" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 outline-none focus:border-cyan-400 font-mono">
-                        <option value="4K">4K Ultra HD (2160x3840)</option>
-                        <option value="1080p" selected>Full HD (1080x1920)</option>
-                        <option value="720p">HD (720x1280)</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-slate-400 font-semibold block mb-1">Taxa de Quadros (FPS)</label>
-                    <select id="export-fps" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 outline-none focus:border-cyan-400 font-mono">
-                        <option value="60" selected>60 FPS (Ultra Fluido)</option>
-                        <option value="30">30 FPS (Padrão)</option>
-                    </select>
+                <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div id="export-progress-bar" class="h-full bg-gradient-to-r from-cyan-400 to-sky-500 w-0 transition-all duration-150"></div>
                 </div>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="space-y-2 pt-2">
-                <button id="btn-confirm-export" class="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-indigo-600 hover:from-cyan-300 hover:to-indigo-500 text-slate-950 font-black text-xs shadow-lg shadow-cyan-500/25 active:scale-98 transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4"></i>
-                    <span>Salvar na Galeria do Celular</span>
-                </button>
-                <button id="btn-share-native" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-semibold text-xs border border-slate-700 active:scale-98 transition-all flex items-center justify-center gap-2">
-                    <i data-lucide="share-2" class="w-4 h-4"></i>
-                    <span>Compartilhar no WhatsApp / Reels</span>
-                </button>
-            </div>
+            <button id="btn-confirm-export" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-400 to-sky-500 hover:from-cyan-300 hover:to-sky-400 text-slate-950 font-black text-sm shadow-lg shadow-cyan-500/25 active:scale-98 transition-all flex items-center justify-center gap-2">
+                <i data-lucide="check" class="w-4 h-4"></i>
+                <span>Salvar na Galeria do Celular</span>
+            </button>
         </div>
     </div>
 
-    <!-- Hidden Native File Input -->
-    <input type="file" id="native-file-input" accept="video/*,image/*,audio/*" class="hidden">
+    <!-- Input Nativo para abrir galeria -->
+    <input type="file" id="native-file-input" accept="video/*" class="hidden">
 
-    <!-- CAPCUT PRO 150MB ENGINE JAVASCRIPT -->
     <script src="js/app.js"></script>
     <script>
         window.addEventListener('DOMContentLoaded', () => {
