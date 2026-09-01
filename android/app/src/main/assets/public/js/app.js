@@ -1,6 +1,6 @@
 /**
- * OpenCut Pro 150MB — CapCut Mobile Level Engine (100% Android Native & Offline)
- * Implementação com Alças de Trim Arrastáveis, Scrubbing Tátil no Canvas e Gavetas Visuais
+ * OpenCut Pro — Engine Calibrada pelo Swarm de 100 Agentes
+ * Foco 100% em Funcionalidade, Estabilidade Tátil e Fluidez Máxima (Sem funções supérfluas)
  */
 
 class OpenCutCapCutEngine {
@@ -15,16 +15,8 @@ class OpenCutCapCutEngine {
         this.overlayText = '';
         this.undoStack = [];
         this.activeChromaKey = false;
-        this.activeVoiceFX = 'none'; // 'none', 'deep', 'chipmunk', 'robot', 'echo', 'megaphone'
+        this.activeVoiceFX = 'none';
         this.activeFilter = 'filter-none';
-
-        // Variáveis de Gestos de Trim e Scrubbing
-        this.isDraggingLeftHandle = false;
-        this.isDraggingRightHandle = false;
-        this.dragStartX = 0;
-        this.initialClipDuration = 0;
-        this.initialClipOffset = 0;
-        this.initialTimelineStart = 0;
 
         this.initDOM();
         this.initAudioChain();
@@ -106,12 +98,10 @@ class OpenCutCapCutEngine {
             this.masterGain = this.audioCtx.createGain();
             this.masterGain.gain.setValueAtTime(this.masterVolume, this.audioCtx.currentTime);
 
-            // 1. High-Pass Filter (Rumble Cut 80Hz)
             this.highPass = this.audioCtx.createBiquadFilter();
             this.highPass.type = 'highpass';
             this.highPass.frequency.setValueAtTime(80, this.audioCtx.currentTime);
 
-            // 2. 3-Band Parametric EQ
             this.lowShelf = this.audioCtx.createBiquadFilter();
             this.lowShelf.type = 'lowshelf';
             this.lowShelf.frequency.setValueAtTime(150, this.audioCtx.currentTime);
@@ -124,13 +114,11 @@ class OpenCutCapCutEngine {
             this.highShelf.type = 'highshelf';
             this.highShelf.frequency.setValueAtTime(8000, this.audioCtx.currentTime);
 
-            // 3. Peak Limiter (-0.3 dBFS)
             this.limiter = this.audioCtx.createDynamicsCompressor();
             this.limiter.threshold.setValueAtTime(-0.3, this.audioCtx.currentTime);
             this.limiter.knee.setValueAtTime(0.0, this.audioCtx.currentTime);
             this.limiter.ratio.setValueAtTime(20.0, this.audioCtx.currentTime);
 
-            // Roteamento em Série
             this.masterGain.connect(this.highPass);
             this.highPass.connect(this.lowShelf);
             this.lowShelf.connect(this.midPeak);
@@ -138,7 +126,7 @@ class OpenCutCapCutEngine {
             this.highShelf.connect(this.limiter);
             this.limiter.connect(this.audioCtx.destination);
         } catch (e) {
-            console.warn('DSP Audio Graph fallback:', e);
+            console.warn('Audio Graph fallback:', e);
         }
     }
 
@@ -149,16 +137,14 @@ class OpenCutCapCutEngine {
 
     updateCanvasDimensions() {
         const rect = this.videoWrapper.getBoundingClientRect();
-        this.canvas.width = rect.width * (window.devicePixelRatio || 1);
-        this.canvas.height = rect.height * (window.devicePixelRatio || 1);
+        this.canvas.width = Math.max(100, Math.round(rect.width * (window.devicePixelRatio || 1)));
+        this.canvas.height = Math.max(100, Math.round(rect.height * (window.devicePixelRatio || 1)));
         this.renderFrame();
     }
 
     setupEventListeners() {
-        // Play / Pause
         this.btnPlayPause.onclick = () => this.togglePlay();
 
-        // Importação de Mídia
         const triggerImport = () => {
             this.nativeFileInput.value = '';
             this.nativeFileInput.click();
@@ -168,14 +154,12 @@ class OpenCutCapCutEngine {
         this.btnAddMedia.onclick = triggerImport;
         this.nativeFileInput.onchange = (e) => this.handleFileSelection(e);
 
-        // Timeline Scrubber Slider
         this.timelineSlider.oninput = (e) => {
             const time = parseFloat(e.target.value);
             this.seekTo(time);
             this.checkMagneticSnap(time);
         };
 
-        // Ações Rápidas da Toolbar
         this.btnUndo.onclick = () => this.performUndo();
         this.btnAspect.onclick = () => this.cycleAspectRatio();
         this.btnKeyframe.onclick = () => this.toggleKeyframeAtCurrentTime();
@@ -183,21 +167,19 @@ class OpenCutCapCutEngine {
         this.btnFreeze.onclick = () => this.freezeCurrentFrame();
         this.btnSpeed.onclick = () => this.cycleSpeedCurve();
 
-        // Gavetas Visuais (Sheets)
         this.btnOpenFilters.onclick = () => this.openSheet(this.filtersSheet);
         this.closeFiltersSheet.onclick = () => this.closeSheet(this.filtersSheet);
 
         this.btnOpenVoiceFX.onclick = () => this.openSheet(this.voiceFXSheet);
         this.closeVoiceFXSheet.onclick = () => this.closeSheet(this.voiceFXSheet);
 
-        // Ações Rápidas no Drawer
         this.drawerBtnChroma.onclick = () => this.toggleChromaKey();
         this.drawerBtnVolume.onclick = () => this.cycleVolume();
         this.drawerBtnFade.onclick = () => this.cycleFade();
         this.drawerBtnText.onclick = () => this.promptTextOverlay();
         this.drawerBtnDelete.onclick = () => this.deleteSelectedClip();
 
-        // Seleção Visual de Filtros no Carrossel
+        // Seleção de Filtros
         document.querySelectorAll('.filter-card').forEach(card => {
             card.onclick = () => {
                 const fId = card.getAttribute('data-filter');
@@ -206,7 +188,7 @@ class OpenCutCapCutEngine {
             };
         });
 
-        // Seleção Visual de Efeitos de Voz
+        // Seleção de Voz
         document.querySelectorAll('.voice-card').forEach(card => {
             card.onclick = () => {
                 const vId = card.getAttribute('data-voice');
@@ -237,7 +219,7 @@ class OpenCutCapCutEngine {
         this.btnConfirmExport.onclick = () => this.startExport(false);
         this.btnShareNative.onclick = () => this.startExport(true);
 
-        // Sincronismo do Player de Vídeo
+        // Player loop
         this.videoPlayer.ontimeupdate = () => {
             if (this.isPlaying && this.selectedClipIndex >= 0) {
                 const clip = this.clips[this.selectedClipIndex];
@@ -260,35 +242,42 @@ class OpenCutCapCutEngine {
         };
     }
 
-    // Scrubbing Tátil no Canvas do Vídeo (Arrasto Horizontal com o Dedo)
+    // Centúria 2 (Agentes 11-20): Canvas Touch Scrubbing (Sem engasgos a 60/120fps)
     setupTouchScrubbing() {
         let touchStartX = 0;
         let timeAtTouchStart = 0;
         let isScrubbing = false;
 
-        this.canvasTouchArea.addEventListener('touchstart', (e) => {
+        const onStart = (e) => {
             if (this.clips.length === 0) return;
             isScrubbing = true;
-            touchStartX = e.touches[0].clientX;
+            touchStartX = e.touches ? e.touches[0].clientX : e.clientX;
             timeAtTouchStart = this.currentTime;
             if (this.isPlaying) {
                 this.togglePlay();
             }
-        }, { passive: true });
+        };
 
-        this.canvasTouchArea.addEventListener('touchmove', (e) => {
+        const onMove = (e) => {
             if (!isScrubbing || this.clips.length === 0) return;
-            const deltaX = e.touches[0].clientX - touchStartX;
-            // Sensibilidade: 150px de arrasto = 1.0s de avanço/recuo
-            const timeDelta = (deltaX / 150) * Math.max(1, this.totalDuration / 10);
+            const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+            const deltaX = currentX - touchStartX;
+            const timeDelta = (deltaX / 140) * Math.max(1, this.totalDuration / 10);
             const newTime = Math.max(0, Math.min(this.totalDuration, timeAtTouchStart + timeDelta));
             this.seekTo(newTime);
-            this.triggerHaptic('SNAP');
-        }, { passive: true });
+        };
 
-        this.canvasTouchArea.addEventListener('touchend', () => {
+        const onEnd = () => {
             isScrubbing = false;
-        }, { passive: true });
+        };
+
+        this.canvasTouchArea.addEventListener('touchstart', onStart, { passive: true });
+        this.canvasTouchArea.addEventListener('touchmove', onMove, { passive: true });
+        this.canvasTouchArea.addEventListener('touchend', onEnd, { passive: true });
+
+        this.canvasTouchArea.addEventListener('mousedown', onStart);
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onEnd);
     }
 
     openSheet(sheetEl) {
@@ -307,7 +296,6 @@ class OpenCutCapCutEngine {
         this.activeFilter = filterId;
         this.clips[this.selectedClipIndex].filter = filterId;
 
-        // Atualiza bordas selecionadas na gaveta
         document.querySelectorAll('.filter-card').forEach(card => {
             if (card.getAttribute('data-filter') === filterId) {
                 card.classList.add('border-cyan-400');
@@ -423,7 +411,7 @@ class OpenCutCapCutEngine {
         this.selectedClipIndex = this.clips.length - 1;
         this.seekTo(this.clips[this.selectedClipIndex].timelineStart);
         this.triggerHaptic('CUT');
-        this.showToast('Vídeo importado com sucesso!');
+        this.showToast('Vídeo adicionado com sucesso!');
     }
 
     getVideoDuration(url) {
@@ -564,7 +552,6 @@ class OpenCutCapCutEngine {
         this.updateUI();
     }
 
-    // Keyframe Animation (Diamante ◇)
     toggleKeyframeAtCurrentTime() {
         if (this.selectedClipIndex < 0 || this.clips.length === 0) return;
 
@@ -593,7 +580,6 @@ class OpenCutCapCutEngine {
         this.updateUI();
     }
 
-    // Freeze Frame (Congelar 3s)
     freezeCurrentFrame() {
         if (this.selectedClipIndex < 0 || this.clips.length === 0) return;
 
@@ -647,7 +633,6 @@ class OpenCutCapCutEngine {
         this.showToast('Quadro congelado por 3.0 segundos!');
     }
 
-    // Chroma Key
     toggleChromaKey() {
         if (this.selectedClipIndex < 0 || this.clips.length === 0) return;
 
@@ -660,7 +645,6 @@ class OpenCutCapCutEngine {
         this.showToast(clip.isChromaActive ? 'Chroma Key Ativado' : 'Chroma Key Desativado');
     }
 
-    // Velocity Speed Curves
     cycleSpeedCurve() {
         if (this.selectedClipIndex < 0 || this.clips.length === 0) return;
 
@@ -673,10 +657,9 @@ class OpenCutCapCutEngine {
         this.videoPlayer.playbackRate = nextSpeed;
 
         this.triggerHaptic('KEYFRAME');
-        this.showToast(`Velocidade: ${nextSpeed}x (WSOLA Pitch Fix)`);
+        this.showToast(`Velocidade: ${nextSpeed}x`);
     }
 
-    // Undo Transacional
     performUndo() {
         if (this.undoStack.length === 0) {
             this.showToast('Nada para desfazer');
@@ -691,7 +674,6 @@ class OpenCutCapCutEngine {
         this.showToast('Ação desfeita!');
     }
 
-    // Split de Clipes
     splitCurrentClip() {
         if (this.selectedClipIndex < 0 || this.clips.length === 0) return;
 
@@ -831,7 +813,6 @@ class OpenCutCapCutEngine {
             ctx.save();
             ctx.globalAlpha = currentClip.opacity ?? 1.0;
             
-            // Filtros e LUTs
             if (currentClip.filter === 'filter-cinematic') {
                 ctx.filter = 'contrast(1.25) brightness(0.95) saturate(1.3) hue-rotate(-5deg)';
             } else if (currentClip.filter === 'filter-vibrant') {
@@ -876,7 +857,6 @@ class OpenCutCapCutEngine {
             ctx.restore();
         }
 
-        // Legenda Karaokê com Bounding Box
         if (this.overlayText) {
             ctx.save();
             const fontSize = Math.round(cw * 0.055);
@@ -967,10 +947,8 @@ class OpenCutCapCutEngine {
             this.videoTrackContainer.appendChild(clipWrapper);
         });
 
-        // Trilha de Áudio Master
         this.audioTrackBox.textContent = `🎵 Master (${Math.round(this.masterVolume * 100)}%) • Limiter Ativo • FX: ${this.activeVoiceFX.toUpperCase()}`;
 
-        // Trilha de Legenda
         if (this.overlayText) {
             this.textTrackBox.textContent = `💬 "${this.overlayText}"`;
         } else {
@@ -978,13 +956,13 @@ class OpenCutCapCutEngine {
         }
     }
 
-    // Manipulador de Gestos de Trim nas Alças Amarelas
+    // Centúria 1 (Agentes 1-10): Alças de Trim Responsivas em Tempo Real
     attachTrimHandler(handleEl, clipIndex, side) {
         let startX = 0;
         let initialDuration = 0;
         let initialOffset = 0;
 
-        const onTouchStart = (e) => {
+        const onStart = (e) => {
             e.stopPropagation();
             this.pushUndoState();
             const clip = this.clips[clipIndex];
@@ -992,42 +970,49 @@ class OpenCutCapCutEngine {
             initialDuration = clip.duration;
             initialOffset = clip.startOffset;
             this.triggerHaptic('SNAP');
+
+            const onMove = (moveEvent) => {
+                moveEvent.preventDefault();
+                moveEvent.stopPropagation();
+                const currentX = moveEvent.touches ? moveEvent.touches[0].clientX : moveEvent.clientX;
+                const deltaX = currentX - startX;
+                const deltaSec = deltaX / 35; // 35 pixels = 1 segundo de corte
+                const currentClip = this.clips[clipIndex];
+
+                if (side === 'right') {
+                    const newDuration = Math.max(0.3, initialDuration + deltaSec);
+                    currentClip.duration = newDuration;
+                } else if (side === 'left') {
+                    const newDuration = Math.max(0.3, initialDuration - deltaSec);
+                    const newOffset = Math.max(0, initialOffset + deltaSec);
+                    currentClip.duration = newDuration;
+                    currentClip.startOffset = newOffset;
+                }
+
+                this.recalcTimeline();
+                this.seekTo(currentClip.timelineStart);
+            };
+
+            const onEnd = () => {
+                window.removeEventListener('touchmove', onMove);
+                window.removeEventListener('touchend', onEnd);
+                window.removeEventListener('mousemove', onMove);
+                window.removeEventListener('mouseup', onEnd);
+                this.triggerHaptic('CUT');
+                this.showToast(`Clipe ajustado para ${this.formatTime(this.clips[clipIndex].duration)}`);
+            };
+
+            window.addEventListener('touchmove', onMove, { passive: false });
+            window.addEventListener('touchend', onEnd);
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onEnd);
         };
 
-        const onTouchMove = (e) => {
-            e.stopPropagation();
-            const currentX = e.touches ? e.touches[0].clientX : e.clientX;
-            const deltaX = currentX - startX;
-            // 40 pixels de arrasto = 1 segundo de corte
-            const deltaSec = deltaX / 40;
-            const clip = this.clips[clipIndex];
-
-            if (side === 'right') {
-                const newDuration = Math.max(0.3, initialDuration + deltaSec);
-                clip.duration = newDuration;
-            } else if (side === 'left') {
-                const newDuration = Math.max(0.3, initialDuration - deltaSec);
-                const newOffset = Math.max(0, initialOffset + deltaSec);
-                clip.duration = newDuration;
-                clip.startOffset = newOffset;
-            }
-
-            this.recalcTimeline();
-            this.seekTo(clip.timelineStart);
-        };
-
-        const onTouchEnd = (e) => {
-            e.stopPropagation();
-            this.triggerHaptic('CUT');
-            this.showToast(`Clipe ajustado para ${this.formatTime(this.clips[clipIndex].duration)}`);
-        };
-
-        handleEl.addEventListener('touchstart', onTouchStart, { passive: false });
-        handleEl.addEventListener('touchmove', onTouchMove, { passive: false });
-        handleEl.addEventListener('touchend', onTouchEnd, { passive: false });
+        handleEl.addEventListener('touchstart', onStart, { passive: false });
+        handleEl.addEventListener('mousedown', onStart);
     }
 
-    // Offline Video Export 4K 60FPS
+    // Centúria 10: Exportação Confiável
     async startExport(isShare = false) {
         if (this.clips.length === 0) return;
 
@@ -1047,7 +1032,7 @@ class OpenCutCapCutEngine {
         try {
             recorder = new MediaRecorder(stream, {
                 mimeType: 'video/webm;codecs=vp9',
-                videoBitsPerSecond: 25000000 // 25 Mbps High-Bitrate
+                videoBitsPerSecond: 25000000
             });
         } catch (e) {
             recorder = new MediaRecorder(stream);
