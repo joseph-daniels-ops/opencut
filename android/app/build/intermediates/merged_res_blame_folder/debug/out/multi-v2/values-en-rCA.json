@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "app.opencut.editor.app-mergeDebugResources-34:/values-en-rCA/values-en-rCA.xml",
+            "outputFile": "app.opencut.editor.app-mergeDebugResources-35:/values-en-rCA/values-en-rCA.xml",
             "map": [
                 {
                     "source": "/home/josedaniel/.gradle/caches/transforms-3/4dde0fce54f6341b6da19770f76a2130/transformed/core-1.12.0/res/values-en-rCA/values-en-rCA.xml",

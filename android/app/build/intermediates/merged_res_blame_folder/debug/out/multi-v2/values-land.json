@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "app.opencut.editor.app-mergeDebugResources-34:/values-land/values-land.xml",
+            "outputFile": "app.opencut.editor.app-mergeDebugResources-35:/values-land/values-land.xml",
             "map": [
                 {
                     "source": "/home/josedaniel/.gradle/caches/transforms-3/42349fcab7a5a6a21b6eefeb34a9888a/transformed/appcompat-1.6.1/res/values-land/values-land.xml",

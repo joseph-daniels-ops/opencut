@@ -1,27 +1,6 @@
 /**
- * OpenCut Pro — CapCut Mobile Level Engine (100% Android Native & Offline)
- * Implementação dos 20 Módulos de Engenharia Especializada:
- * 
- * 1. Keyframe Animation Engine (Position, Scale, Rotation, Opacity Bézier)
- * 2. Chroma Key & Green Screen GLSL (YCbCr Dist + Despill + Shadow Recovery)
- * 3. PIP / Overlay Multi-trilha & Blend Modes
- * 4. Transições Cinematográficas GLSL (Zoom, Flash, Spin, Glitch)
- * 5. Auto-Captions & Legendas Estilo Karaokê Word-by-Word
- * 6. Velocity Speed Curves (Hero, Montage, Bullet, Flash)
- * 7. Stickers Dinâmicos & Emojis com Física Spring (Pop, Wiggle, Pulse)
- * 8. Redução de Ruído & Equalizador Paramétrico de 3 Bandas
- * 9. Video Masking Engine (Linear, Radial, Retângulo, Coração SDF)
- * 10. Canvas Blur Framing & Auto-Background
- * 11. Touch Transform Gizmo & Guias Magnéticas de Centralização
- * 12. CapCut Dark Sleek Theme Obsidian 120Hz
- * 13. Histórico Transacional Profundo (Undo / Redo)
- * 14. Beat Detection & Marcadores de Ritmo Musical
- * 15. Voice Changer FX (Robô, Chipmunk, Deep, Eco, Megafone)
- * 16. Video Freeze Frame Instantâneo 1-Toque (3.0s estático)
- * 17. Reverse Video Engine
- * 18. Smart Crop & Face/Subject Tracking
- * 19. Live Audio Waveform UI com Gradiente Neon
- * 20. Exportação 4K 60FPS High-Bitrate MediaStore
+ * OpenCut Pro 150MB — CapCut Mobile Level Engine (100% Android Native & Offline)
+ * Implementação com Alças de Trim Arrastáveis, Scrubbing Tátil no Canvas e Gavetas Visuais
  */
 
 class OpenCutCapCutEngine {
@@ -37,10 +16,20 @@ class OpenCutCapCutEngine {
         this.undoStack = [];
         this.activeChromaKey = false;
         this.activeVoiceFX = 'none'; // 'none', 'deep', 'chipmunk', 'robot', 'echo', 'megaphone'
+        this.activeFilter = 'filter-none';
+
+        // Variáveis de Gestos de Trim e Scrubbing
+        this.isDraggingLeftHandle = false;
+        this.isDraggingRightHandle = false;
+        this.dragStartX = 0;
+        this.initialClipDuration = 0;
+        this.initialClipOffset = 0;
+        this.initialTimelineStart = 0;
 
         this.initDOM();
         this.initAudioChain();
         this.setupEventListeners();
+        this.setupTouchScrubbing();
         this.setupCanvas();
         this.updateUI();
     }
@@ -50,6 +39,7 @@ class OpenCutCapCutEngine {
         this.canvas = document.getElementById('preview-canvas');
         this.ctx = this.canvas.getContext('2d');
         this.videoWrapper = document.getElementById('video-wrapper');
+        this.canvasTouchArea = document.getElementById('canvas-touch-area');
         this.emptyState = document.getElementById('empty-state');
         this.btnPlayPause = document.getElementById('btn-play-pause');
         this.playIcon = document.getElementById('play-icon');
@@ -72,14 +62,20 @@ class OpenCutCapCutEngine {
         this.btnImportFirst = document.getElementById('btn-import-first');
         this.nativeFileInput = document.getElementById('native-file-input');
 
-        // Actions Drawer (CapCut Level)
-        this.actionsDrawer = document.getElementById('actions-drawer');
+        // Gavetas Visuais (Sheets)
+        this.btnOpenFilters = document.getElementById('btn-open-filters');
+        this.filtersSheet = document.getElementById('filters-sheet');
+        this.closeFiltersSheet = document.getElementById('close-filters-sheet');
+        this.drawerFilterLabel = document.getElementById('drawer-filter-label');
+
+        this.btnOpenVoiceFX = document.getElementById('btn-open-voicefx');
+        this.voiceFXSheet = document.getElementById('voicefx-sheet');
+        this.closeVoiceFXSheet = document.getElementById('close-voicefx-sheet');
+        this.drawerVoiceFXLabel = document.getElementById('drawer-voicefx-label');
+
+        // Actions Drawer
         this.drawerBtnChroma = document.getElementById('drawer-btn-chroma');
         this.drawerChromaLabel = document.getElementById('drawer-chroma-label');
-        this.drawerBtnFilter = document.getElementById('drawer-btn-filter');
-        this.drawerFilterLabel = document.getElementById('drawer-filter-label');
-        this.drawerBtnVoiceFX = document.getElementById('drawer-btn-voicefx');
-        this.drawerVoiceFXLabel = document.getElementById('drawer-voicefx-label');
         this.drawerBtnVolume = document.getElementById('drawer-btn-volume');
         this.drawerVolumeLabel = document.getElementById('drawer-volume-label');
         this.drawerBtnFade = document.getElementById('drawer-btn-fade');
@@ -101,7 +97,7 @@ class OpenCutCapCutEngine {
         this.exportStatusLabel = document.getElementById('export-status-label');
     }
 
-    // Agentes 8, 11 e 15: Audio DSP Chain (3-Band EQ + Voice FX + Limiter)
+    // Audio DSP Chain (3-Band EQ + Voice FX + Limiter)
     initAudioChain() {
         try {
             const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -128,15 +124,11 @@ class OpenCutCapCutEngine {
             this.highShelf.type = 'highshelf';
             this.highShelf.frequency.setValueAtTime(8000, this.audioCtx.currentTime);
 
-            // 3. Brickwall Peak Limiter (-0.3 dBFS)
+            // 3. Peak Limiter (-0.3 dBFS)
             this.limiter = this.audioCtx.createDynamicsCompressor();
             this.limiter.threshold.setValueAtTime(-0.3, this.audioCtx.currentTime);
             this.limiter.knee.setValueAtTime(0.0, this.audioCtx.currentTime);
             this.limiter.ratio.setValueAtTime(20.0, this.audioCtx.currentTime);
-
-            // 4. Soft Clipper Tanh
-            this.softClipper = this.audioCtx.createWaveShaper();
-            this.softClipper.curve = this.createTanhCurve(2048);
 
             // Roteamento em Série
             this.masterGain.connect(this.highPass);
@@ -144,158 +136,270 @@ class OpenCutCapCutEngine {
             this.lowShelf.connect(this.midPeak);
             this.midPeak.connect(this.highShelf);
             this.highShelf.connect(this.limiter);
-            this.limiter.connect(this.softClipper);
-            this.softClipper.connect(this.audioCtx.destination);
+            this.limiter.connect(this.audioCtx.destination);
         } catch (e) {
             console.warn('DSP Audio Graph fallback:', e);
         }
     }
 
-    createTanhCurve(samples) {
-        const curve = new Float32Array(samples);
-        for (let i = 0; i < samples; i++) {
-            const x = (i * 2) / samples - 1;
-            curve[i] = Math.tanh(x);
-        }
-        return curve;
-    }
-
     setupCanvas() {
         this.updateCanvasDimensions();
+        window.addEventListener('resize', () => this.updateCanvasDimensions());
     }
 
     updateCanvasDimensions() {
-        if (this.aspectRatio === '9:16') {
-            this.canvas.width = 1080;
-            this.canvas.height = 1920;
-        } else if (this.aspectRatio === '16:9') {
-            this.canvas.width = 1920;
-            this.canvas.height = 1080;
-        } else if (this.aspectRatio === '1:1') {
-            this.canvas.width = 1080;
-            this.canvas.height = 1080;
-        } else {
-            this.canvas.width = 1080;
-            this.canvas.height = 1350;
-        }
+        const rect = this.videoWrapper.getBoundingClientRect();
+        this.canvas.width = rect.width * (window.devicePixelRatio || 1);
+        this.canvas.height = rect.height * (window.devicePixelRatio || 1);
         this.renderFrame();
     }
 
-    pushUndoState() {
-        if (this.clips.length > 0) {
-            this.undoStack.push(JSON.stringify(this.clips));
-            if (this.undoStack.length > 20) this.undoStack.shift();
-        }
-    }
-
     setupEventListeners() {
-        this.btnPlayPause.addEventListener('click', () => this.togglePlay());
-        this.btnImportFirst.addEventListener('click', () => this.nativeFileInput.click());
-        this.btnAddMedia.addEventListener('click', () => this.nativeFileInput.click());
+        // Play / Pause
+        this.btnPlayPause.onclick = () => this.togglePlay();
 
-        this.nativeFileInput.addEventListener('change', (e) => this.handleFileSelection(e));
+        // Importação de Mídia
+        const triggerImport = () => {
+            this.nativeFileInput.value = '';
+            this.nativeFileInput.click();
+            this.triggerHaptic('GENERIC_CLICK');
+        };
+        this.btnImportFirst.onclick = triggerImport;
+        this.btnAddMedia.onclick = triggerImport;
+        this.nativeFileInput.onchange = (e) => this.handleFileSelection(e);
 
-        this.timelineSlider.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            this.checkMagneticSnap(val);
-            this.seekTo(val);
+        // Timeline Scrubber Slider
+        this.timelineSlider.oninput = (e) => {
+            const time = parseFloat(e.target.value);
+            this.seekTo(time);
+            this.checkMagneticSnap(time);
+        };
+
+        // Ações Rápidas da Toolbar
+        this.btnUndo.onclick = () => this.performUndo();
+        this.btnAspect.onclick = () => this.cycleAspectRatio();
+        this.btnKeyframe.onclick = () => this.toggleKeyframeAtCurrentTime();
+        this.btnSplit.onclick = () => this.splitCurrentClip();
+        this.btnFreeze.onclick = () => this.freezeCurrentFrame();
+        this.btnSpeed.onclick = () => this.cycleSpeedCurve();
+
+        // Gavetas Visuais (Sheets)
+        this.btnOpenFilters.onclick = () => this.openSheet(this.filtersSheet);
+        this.closeFiltersSheet.onclick = () => this.closeSheet(this.filtersSheet);
+
+        this.btnOpenVoiceFX.onclick = () => this.openSheet(this.voiceFXSheet);
+        this.closeVoiceFXSheet.onclick = () => this.closeSheet(this.voiceFXSheet);
+
+        // Ações Rápidas no Drawer
+        this.drawerBtnChroma.onclick = () => this.toggleChromaKey();
+        this.drawerBtnVolume.onclick = () => this.cycleVolume();
+        this.drawerBtnFade.onclick = () => this.cycleFade();
+        this.drawerBtnText.onclick = () => this.promptTextOverlay();
+        this.drawerBtnDelete.onclick = () => this.deleteSelectedClip();
+
+        // Seleção Visual de Filtros no Carrossel
+        document.querySelectorAll('.filter-card').forEach(card => {
+            card.onclick = () => {
+                const fId = card.getAttribute('data-filter');
+                this.selectFilter(fId);
+                this.closeSheet(this.filtersSheet);
+            };
         });
 
-        this.btnUndo.addEventListener('click', () => this.performUndo());
-        this.btnKeyframe.addEventListener('click', () => this.toggleKeyframeAtCurrentTime());
-        this.btnSplit.addEventListener('click', () => this.splitCurrentClip());
-        this.btnFreeze.addEventListener('click', () => this.freezeCurrentFrame());
-        this.btnSpeed.addEventListener('click', () => this.cycleSpeedCurve());
-        this.btnAspect.addEventListener('click', () => this.cycleAspectRatio());
+        // Seleção Visual de Efeitos de Voz
+        document.querySelectorAll('.voice-card').forEach(card => {
+            card.onclick = () => {
+                const vId = card.getAttribute('data-voice');
+                this.selectVoiceFX(vId);
+                this.closeSheet(this.voiceFXSheet);
+            };
+        });
 
-        this.drawerBtnChroma.addEventListener('click', () => this.toggleChromaKey());
-        this.drawerBtnFilter.addEventListener('click', () => this.cycleFilter());
-        this.drawerBtnVoiceFX.addEventListener('click', () => this.cycleVoiceFX());
-        this.drawerBtnVolume.addEventListener('click', () => this.cycleVolume());
-        this.drawerBtnFade.addEventListener('click', () => this.cycleFade());
-        this.drawerBtnText.addEventListener('click', () => this.promptTextOverlay());
-        this.drawerBtnDelete.addEventListener('click', () => this.deleteSelectedClip());
-
-        this.btnExportModal.addEventListener('click', () => {
+        // Export Modal
+        this.btnExportModal.onclick = () => {
             if (this.clips.length === 0) {
-                this.showToast('Importe um vídeo para exportar!');
+                this.showToast('Importe um vídeo antes de exportar!');
                 return;
             }
             this.exportModal.classList.remove('hidden');
             this.exportModal.classList.add('flex');
-        });
+            this.exportOptionsBox.classList.remove('hidden');
+            this.exportProgressBox.classList.add('hidden');
+            this.btnConfirmExport.disabled = false;
+            this.btnShareNative.disabled = false;
+        };
 
-        this.closeExportModal.addEventListener('click', () => {
+        this.closeExportModal.onclick = () => {
             this.exportModal.classList.add('hidden');
             this.exportModal.classList.remove('flex');
-        });
+        };
 
-        this.btnConfirmExport.addEventListener('click', () => this.startExport(false));
-        this.btnShareNative.addEventListener('click', () => this.startExport(true));
+        this.btnConfirmExport.onclick = () => this.startExport(false);
+        this.btnShareNative.onclick = () => this.startExport(true);
 
-        this.videoPlayer.addEventListener('timeupdate', () => {
+        // Sincronismo do Player de Vídeo
+        this.videoPlayer.ontimeupdate = () => {
             if (this.isPlaying && this.selectedClipIndex >= 0) {
                 const clip = this.clips[this.selectedClipIndex];
-                if (clip) {
-                    const relativeTime = (this.videoPlayer.currentTime - clip.startOffset) / (clip.speed || 1);
-                    this.currentTime = clip.timelineStart + Math.max(0, relativeTime);
+                const clipTime = (this.videoPlayer.currentTime - clip.startOffset) / (clip.speed || 1);
+                this.currentTime = clip.timelineStart + clipTime;
 
-                    if (this.currentTime >= clip.timelineStart + clip.duration) {
-                        this.moveToNextClip();
-                    } else {
-                        this.updateUI();
-                        this.renderFrame();
-                    }
+                if (this.currentTime >= clip.timelineStart + clip.duration) {
+                    this.moveToNextClip();
+                } else {
+                    this.updateUI();
+                    this.renderFrame();
                 }
             }
-        });
+        };
 
-        this.videoPlayer.addEventListener('ended', () => {
+        this.videoPlayer.onended = () => {
             if (this.isPlaying) {
                 this.moveToNextClip();
             }
+        };
+    }
+
+    // Scrubbing Tátil no Canvas do Vídeo (Arrasto Horizontal com o Dedo)
+    setupTouchScrubbing() {
+        let touchStartX = 0;
+        let timeAtTouchStart = 0;
+        let isScrubbing = false;
+
+        this.canvasTouchArea.addEventListener('touchstart', (e) => {
+            if (this.clips.length === 0) return;
+            isScrubbing = true;
+            touchStartX = e.touches[0].clientX;
+            timeAtTouchStart = this.currentTime;
+            if (this.isPlaying) {
+                this.togglePlay();
+            }
+        }, { passive: true });
+
+        this.canvasTouchArea.addEventListener('touchmove', (e) => {
+            if (!isScrubbing || this.clips.length === 0) return;
+            const deltaX = e.touches[0].clientX - touchStartX;
+            // Sensibilidade: 150px de arrasto = 1.0s de avanço/recuo
+            const timeDelta = (deltaX / 150) * Math.max(1, this.totalDuration / 10);
+            const newTime = Math.max(0, Math.min(this.totalDuration, timeAtTouchStart + timeDelta));
+            this.seekTo(newTime);
+            this.triggerHaptic('SNAP');
+        }, { passive: true });
+
+        this.canvasTouchArea.addEventListener('touchend', () => {
+            isScrubbing = false;
+        }, { passive: true });
+    }
+
+    openSheet(sheetEl) {
+        sheetEl.classList.remove('translate-y-full');
+        this.triggerHaptic('GENERIC_CLICK');
+    }
+
+    closeSheet(sheetEl) {
+        sheetEl.classList.add('translate-y-full');
+        this.triggerHaptic('GENERIC_CLICK');
+    }
+
+    selectFilter(filterId) {
+        if (this.selectedClipIndex < 0 || this.clips.length === 0) return;
+        this.pushUndoState();
+        this.activeFilter = filterId;
+        this.clips[this.selectedClipIndex].filter = filterId;
+
+        // Atualiza bordas selecionadas na gaveta
+        document.querySelectorAll('.filter-card').forEach(card => {
+            if (card.getAttribute('data-filter') === filterId) {
+                card.classList.add('border-cyan-400');
+                card.classList.remove('border-transparent');
+            } else {
+                card.classList.remove('border-cyan-400');
+                card.classList.add('border-transparent');
+            }
         });
+
+        const filterNames = {
+            'filter-none': 'Normal',
+            'filter-cinematic': 'Cinemático',
+            'filter-cyberpunk': 'Cyberpunk',
+            'filter-vintage': 'VHS 90s',
+            'filter-vibrant': 'Vibrante',
+            'filter-bw': 'Noir Contrast'
+        };
+
+        this.drawerFilterLabel.textContent = `Filtro: ${filterNames[filterId] || 'Ativo'}`;
+        this.renderFrame();
+        this.triggerHaptic('KEYFRAME');
+        this.showToast(`Filtro aplicado: ${filterNames[filterId] || 'Personalizado'}`);
     }
 
-    triggerHaptic(type) {
-        if (window.AndroidBridge && typeof window.AndroidBridge.triggerHapticFeedback === 'function') {
-            window.AndroidBridge.triggerHapticFeedback(type);
-        } else if (window.AndroidBridge && typeof window.AndroidBridge.vibrate === 'function') {
-            window.AndroidBridge.vibrate(20);
+    selectVoiceFX(voiceId) {
+        this.activeVoiceFX = voiceId;
+
+        document.querySelectorAll('.voice-card').forEach(card => {
+            if (card.getAttribute('data-voice') === voiceId) {
+                card.classList.add('border-cyan-400');
+                card.classList.remove('border-transparent');
+            } else {
+                card.classList.remove('border-cyan-400');
+                card.classList.add('border-transparent');
+            }
+        });
+
+        const voiceLabels = {
+            'none': 'Original',
+            'deep': 'Voz Grossa',
+            'chipmunk': 'Esquilo',
+            'robot': 'Robô',
+            'echo': 'Eco Espacial',
+            'megaphone': 'Megafone'
+        };
+
+        this.drawerVoiceFXLabel.textContent = `Voz: ${voiceLabels[voiceId] || 'Normal'}`;
+
+        if (this.midPeak && this.lowShelf && this.highPass) {
+            const t = this.audioCtx.currentTime;
+            if (this.activeVoiceFX === 'deep') {
+                this.lowShelf.gain.setTargetAtTime(8.0, t, 0.05);
+                this.highPass.frequency.setTargetAtTime(40, t, 0.05);
+            } else if (this.activeVoiceFX === 'chipmunk') {
+                this.lowShelf.gain.setTargetAtTime(-12.0, t, 0.05);
+                this.midPeak.gain.setTargetAtTime(6.0, t, 0.05);
+            } else if (this.activeVoiceFX === 'robot') {
+                this.midPeak.gain.setTargetAtTime(10.0, t, 0.05);
+                this.midPeak.frequency.setTargetAtTime(1500, t, 0.05);
+            } else if (this.activeVoiceFX === 'megaphone') {
+                this.highPass.frequency.setTargetAtTime(400, t, 0.05);
+                this.midPeak.gain.setTargetAtTime(8.0, t, 0.05);
+            } else {
+                this.lowShelf.gain.setTargetAtTime(0, t, 0.05);
+                this.midPeak.gain.setTargetAtTime(0, t, 0.05);
+                this.highPass.frequency.setTargetAtTime(80, t, 0.05);
+            }
         }
+
+        this.triggerHaptic('KEYFRAME');
+        this.showToast(`Efeito de Voz: ${voiceLabels[voiceId]}`);
     }
 
-    showToast(msg) {
-        if (window.AndroidBridge && typeof window.AndroidBridge.showToast === 'function') {
-            window.AndroidBridge.showToast(msg);
-        } else {
-            alert(msg);
-        }
-    }
-
-    formatTime(seconds) {
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        const tenths = Math.floor((seconds % 1) * 10);
-        return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${tenths}`;
+    pushUndoState() {
+        this.undoStack.push(JSON.stringify(this.clips));
+        if (this.undoStack.length > 50) this.undoStack.shift();
     }
 
     async handleFileSelection(e) {
-        const files = e.target.files;
-        if (!files || files.length === 0) return;
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
 
-        this.pushUndoState();
-
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
+        for (let file of files) {
             const url = URL.createObjectURL(file);
             const duration = await this.getVideoDuration(url);
 
             const clip = {
-                id: `clip-${Date.now()}-${i}`,
-                name: file.name.replace(/\.[^/.]+$/, ''),
-                url: url,
+                id: `clip-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                name: file.name.substring(0, 16),
                 file: file,
+                url: url,
                 originalDuration: duration,
                 duration: duration,
                 startOffset: 0,
@@ -309,7 +413,7 @@ class OpenCutCapCutEngine {
                 fadeMode: 'none',
                 isChromaActive: false,
                 isFrozen: false,
-                keyframes: [] // Agente 1: [ { timeOffset: 0, scale: 1.0, opacity: 1.0 } ]
+                keyframes: []
             };
 
             this.clips.push(clip);
@@ -319,7 +423,7 @@ class OpenCutCapCutEngine {
         this.selectedClipIndex = this.clips.length - 1;
         this.seekTo(this.clips[this.selectedClipIndex].timelineStart);
         this.triggerHaptic('CUT');
-        this.showToast('Vídeo adicionado com sucesso!');
+        this.showToast('Vídeo importado com sucesso!');
     }
 
     getVideoDuration(url) {
@@ -343,9 +447,8 @@ class OpenCutCapCutEngine {
         this.updateUI();
     }
 
-    // Agente 7: Magnetic Snapping Sub-frame
     checkMagneticSnap(time) {
-        const snapThreshold = 0.2;
+        const snapThreshold = 0.15;
         for (let clip of this.clips) {
             if (Math.abs(time - clip.timelineStart) < snapThreshold && Math.abs(time - clip.timelineStart) > 0.02) {
                 this.timelineSlider.value = clip.timelineStart;
@@ -391,7 +494,6 @@ class OpenCutCapCutEngine {
                 this.videoPlayer.currentTime = Math.max(0, offset);
             }
 
-            // Equal-Power Fade Calculation
             let effectiveVolume = currentClip.volume * this.masterVolume;
             if (currentClip.fadeMode === 'in' || currentClip.fadeMode === 'both') {
                 const elapsedInClip = time - currentClip.timelineStart;
@@ -462,7 +564,7 @@ class OpenCutCapCutEngine {
         this.updateUI();
     }
 
-    // Agente 1: Keyframe Animation (Diamante ◇)
+    // Keyframe Animation (Diamante ◇)
     toggleKeyframeAtCurrentTime() {
         if (this.selectedClipIndex < 0 || this.clips.length === 0) return;
 
@@ -491,7 +593,7 @@ class OpenCutCapCutEngine {
         this.updateUI();
     }
 
-    // Agente 16: Freeze Frame (Congelar 3s)
+    // Freeze Frame (Congelar 3s)
     freezeCurrentFrame() {
         if (this.selectedClipIndex < 0 || this.clips.length === 0) return;
 
@@ -504,7 +606,7 @@ class OpenCutCapCutEngine {
             return;
         }
 
-        const freezeDuration = 3.0; // 3 segundos padrão CapCut
+        const freezeDuration = 3.0;
         const freezeClip = {
             id: `freeze-${Date.now()}`,
             name: `❄️ Congelado (3.0s)`,
@@ -545,7 +647,7 @@ class OpenCutCapCutEngine {
         this.showToast('Quadro congelado por 3.0 segundos!');
     }
 
-    // Agente 2: Chroma Key & Green Screen
+    // Chroma Key
     toggleChromaKey() {
         if (this.selectedClipIndex < 0 || this.clips.length === 0) return;
 
@@ -555,54 +657,10 @@ class OpenCutCapCutEngine {
         this.drawerChromaLabel.textContent = clip.isChromaActive ? 'Chroma: Ativo' : 'Chroma Key';
         this.renderFrame();
         this.triggerHaptic('GENERIC_CLICK');
-        this.showToast(clip.isChromaActive ? 'Chroma Key (Fundo Verde) Ativado' : 'Chroma Key Desativado');
+        this.showToast(clip.isChromaActive ? 'Chroma Key Ativado' : 'Chroma Key Desativado');
     }
 
-    // Agente 15: Voice Changer FX
-    cycleVoiceFX() {
-        const effects = [
-            { id: 'none', label: 'Efeitos de Voz' },
-            { id: 'deep', label: 'Voz Grossa' },
-            { id: 'chipmunk', label: 'Esquilo' },
-            { id: 'robot', label: 'Robô' },
-            { id: 'echo', label: 'Eco Espacial' },
-            { id: 'megaphone', label: 'Megafone' }
-        ];
-
-        let currentIdx = effects.findIndex(e => e.id === this.activeVoiceFX);
-        if (currentIdx === -1) currentIdx = 0;
-
-        const next = effects[(currentIdx + 1) % effects.length];
-        this.activeVoiceFX = next.id;
-        this.drawerVoiceFXLabel.textContent = next.label;
-
-        // Ajustes no Biquad Filter Chain
-        if (this.midPeak && this.lowShelf && this.highPass) {
-            const t = this.audioCtx.currentTime;
-            if (this.activeVoiceFX === 'deep') {
-                this.lowShelf.gain.setTargetAtTime(8.0, t, 0.05);
-                this.highPass.frequency.setTargetAtTime(40, t, 0.05);
-            } else if (this.activeVoiceFX === 'chipmunk') {
-                this.lowShelf.gain.setTargetAtTime(-12.0, t, 0.05);
-                this.midPeak.gain.setTargetAtTime(6.0, t, 0.05);
-            } else if (this.activeVoiceFX === 'robot') {
-                this.midPeak.gain.setTargetAtTime(10.0, t, 0.05);
-                this.midPeak.frequency.setTargetAtTime(1500, t, 0.05);
-            } else if (this.activeVoiceFX === 'megaphone') {
-                this.highPass.frequency.setTargetAtTime(400, t, 0.05);
-                this.midPeak.gain.setTargetAtTime(8.0, t, 0.05);
-            } else {
-                this.lowShelf.gain.setTargetAtTime(0, t, 0.05);
-                this.midPeak.gain.setTargetAtTime(0, t, 0.05);
-                this.highPass.frequency.setTargetAtTime(80, t, 0.05);
-            }
-        }
-
-        this.triggerHaptic('KEYFRAME');
-        this.showToast(`Voz: ${next.label}`);
-    }
-
-    // Agente 6: Velocity Speed Curves
+    // Velocity Speed Curves
     cycleSpeedCurve() {
         if (this.selectedClipIndex < 0 || this.clips.length === 0) return;
 
@@ -618,7 +676,7 @@ class OpenCutCapCutEngine {
         this.showToast(`Velocidade: ${nextSpeed}x (WSOLA Pitch Fix)`);
     }
 
-    // Agente 13: Undo Transacional
+    // Undo Transacional
     performUndo() {
         if (this.undoStack.length === 0) {
             this.showToast('Nada para desfazer');
@@ -633,7 +691,7 @@ class OpenCutCapCutEngine {
         this.showToast('Ação desfeita!');
     }
 
-    // Agente 8: Split Milimétrico
+    // Split de Clipes
     splitCurrentClip() {
         if (this.selectedClipIndex < 0 || this.clips.length === 0) return;
 
@@ -641,7 +699,7 @@ class OpenCutCapCutEngine {
         const currentClip = this.clips[this.selectedClipIndex];
         const splitPoint = this.currentTime - currentClip.timelineStart;
 
-        if (splitPoint <= 0.3 || splitPoint >= currentClip.duration - 0.3) {
+        if (splitPoint <= 0.2 || splitPoint >= currentClip.duration - 0.2) {
             this.showToast('Mova a agulha para um ponto válido de corte!');
             return;
         }
@@ -685,31 +743,7 @@ class OpenCutCapCutEngine {
 
         this.recalcTimeline();
         this.triggerHaptic('DELETE');
-        this.showToast('Clipe excluído (Ripple aplicado)');
-    }
-
-    cycleFilter() {
-        if (this.selectedClipIndex < 0 || this.clips.length === 0) return;
-
-        const filters = [
-            { id: 'filter-none', name: 'Normal (Rec.709)' },
-            { id: 'filter-cinematic', name: 'LUT Cinemático' },
-            { id: 'filter-vibrant', name: 'LUT Vibrante' },
-            { id: 'filter-cyberpunk', name: 'LUT Cyberpunk' },
-            { id: 'filter-vintage', name: 'LUT Vintage' },
-            { id: 'filter-bw', name: 'P&B Noir' }
-        ];
-
-        let currentIdx = filters.findIndex(f => f.id === this.clips[this.selectedClipIndex].filter);
-        if (currentIdx === -1) currentIdx = 0;
-
-        const nextFilter = filters[(currentIdx + 1) % filters.length];
-        this.clips[this.selectedClipIndex].filter = nextFilter.id;
-        this.drawerFilterLabel.textContent = nextFilter.name;
-
-        this.renderFrame();
-        this.triggerHaptic('GENERIC_CLICK');
-        this.showToast(`Filtro: ${nextFilter.name}`);
+        this.showToast('Clipe excluído');
     }
 
     cycleVolume() {
@@ -730,10 +764,6 @@ class OpenCutCapCutEngine {
 
         if (this.masterGain) {
             this.masterGain.gain.setValueAtTime(this.masterVolume, this.audioCtx.currentTime);
-        }
-
-        if (this.selectedClipIndex >= 0 && this.clips[this.selectedClipIndex]) {
-            this.videoPlayer.volume = Math.min(1.0, this.clips[this.selectedClipIndex].volume * this.masterVolume);
         }
 
         this.triggerHaptic('KEYFRAME');
@@ -778,7 +808,7 @@ class OpenCutCapCutEngine {
         this.aspectRatio = ratios[nextIdx];
         this.btnAspect.textContent = this.aspectRatio;
 
-        this.videoWrapper.className = `aspect-${this.aspectRatio.replace(':', '-')} h-full max-h-[310px] relative bg-black rounded-xl overflow-hidden shadow-2xl flex items-center justify-center transition-all`;
+        this.videoWrapper.className = `aspect-${this.aspectRatio.replace(':', '-')} h-full max-h-[310px] relative bg-black rounded-xl overflow-hidden shadow-2xl flex items-center justify-center transition-all pointer-events-none`;
         this.updateCanvasDimensions();
         this.triggerHaptic('GENERIC_CLICK');
     }
@@ -801,7 +831,7 @@ class OpenCutCapCutEngine {
             ctx.save();
             ctx.globalAlpha = currentClip.opacity ?? 1.0;
             
-            // Agente 4: GLSL Shaders & LUT Filters
+            // Filtros e LUTs
             if (currentClip.filter === 'filter-cinematic') {
                 ctx.filter = 'contrast(1.25) brightness(0.95) saturate(1.3) hue-rotate(-5deg)';
             } else if (currentClip.filter === 'filter-vibrant') {
@@ -832,7 +862,6 @@ class OpenCutCapCutEngine {
                 drawY = (ch - drawH) / 2;
             }
 
-            // Agente 1: Keyframe Interpolation (Scale/Transform)
             let scaleFactor = 1.0;
             if (currentClip.keyframes && currentClip.keyframes.length > 0) {
                 const offset = this.currentTime - currentClip.timelineStart;
@@ -847,7 +876,7 @@ class OpenCutCapCutEngine {
             ctx.restore();
         }
 
-        // Agente 5: Karaokê / Tipografia com Bounding Pill
+        // Legenda Karaokê com Bounding Box
         if (this.overlayText) {
             ctx.save();
             const fontSize = Math.round(cw * 0.055);
@@ -863,18 +892,16 @@ class OpenCutCapCutEngine {
             const bgW = metrics.width + padX * 2;
             const bgH = fontSize + padY * 2;
 
-            // Fundo Escuro Arredondado
             ctx.fillStyle = 'rgba(9, 13, 22, 0.92)';
             ctx.beginPath();
             ctx.roundRect(textX - bgW / 2, textY - bgH / 2, bgW, bgH, 16);
             ctx.fill();
 
-            ctx.strokeStyle = 'rgba(0, 229, 255, 0.6)';
+            ctx.strokeStyle = '#00F2FE';
             ctx.lineWidth = 2.5;
             ctx.stroke();
 
-            // Texto Branco com Highlight Ciano
-            ctx.fillStyle = '#00E5FF';
+            ctx.fillStyle = '#FFD700';
             ctx.fillText(this.overlayText, textX, textY);
             ctx.restore();
         }
@@ -894,28 +921,50 @@ class OpenCutCapCutEngine {
         this.timeDisplay.textContent = `${this.formatTime(this.currentTime)} / ${this.formatTime(this.totalDuration)}`;
         this.timelineSlider.value = this.currentTime;
 
-        // Trilha de Vídeo Multiclip com Diamante de Keyframes
+        // Trilha de Vídeo Multiclip com Alças Amarelas de Trim e Touch Drag
         this.videoTrackContainer.innerHTML = '';
         this.clips.forEach((clip, idx) => {
-            const clipEl = document.createElement('div');
+            const clipWrapper = document.createElement('div');
             const isSelected = idx === this.selectedClipIndex;
-            const flexGrow = Math.max(1, Math.round(clip.duration * 2));
+            const flexGrow = Math.max(1, Math.round(clip.duration * 2.5));
             const hasKeyframes = clip.keyframes && clip.keyframes.length > 0;
 
-            clipEl.className = `flex-1 min-w-[70px] h-full rounded-md flex flex-col justify-center px-2 cursor-pointer transition-all relative ${
-                isSelected ? 'bg-cyan-950/60 border-2 border-cyan-400 text-cyan-100 font-bold' : 'bg-slate-800 border border-slate-700 text-slate-300'
+            clipWrapper.className = `flex-1 min-w-[90px] h-full rounded-lg flex items-stretch overflow-hidden relative transition-all ${
+                isSelected ? 'ring-2 ring-yellow-400 bg-cyan-950/60 shadow-lg' : 'bg-slate-800 border border-slate-700'
             }`;
-            clipEl.style.flex = `${flexGrow}`;
-            clipEl.innerHTML = `
-                <span class="text-[10px] truncate leading-tight">${clip.name}</span>
-                <span class="text-[8px] font-mono opacity-70">${this.formatTime(clip.duration)} • ${clip.speed || 1}x</span>
-                ${hasKeyframes ? '<span class="absolute top-1 right-1 text-cyan-400 text-[8px]">◆</span>' : ''}
+            clipWrapper.style.flex = `${flexGrow}`;
+
+            // 1. Alça Esquerda de Trim
+            const leftHandle = document.createElement('div');
+            leftHandle.className = `trim-handle ${isSelected ? 'flex' : 'hidden'}`;
+            leftHandle.title = 'Arrastar para cortar início';
+            this.attachTrimHandler(leftHandle, idx, 'left');
+
+            // 2. Corpo Central do Clipe
+            const centerBody = document.createElement('div');
+            centerBody.className = 'flex-1 flex flex-col justify-center px-2 cursor-pointer overflow-hidden';
+            centerBody.innerHTML = `
+                <span class="text-[10px] font-bold truncate leading-tight text-white">${clip.name}</span>
+                <span class="text-[8px] font-mono text-cyan-300 opacity-90">${this.formatTime(clip.duration)} • ${clip.speed || 1}x</span>
+                ${hasKeyframes ? '<span class="absolute top-1 right-3 text-cyan-400 text-[8px]">◆</span>' : ''}
             `;
-            clipEl.onclick = () => {
+            centerBody.onclick = () => {
+                this.selectedClipIndex = idx;
                 this.seekTo(clip.timelineStart);
                 this.triggerHaptic('GENERIC_CLICK');
             };
-            this.videoTrackContainer.appendChild(clipEl);
+
+            // 3. Alça Direita de Trim
+            const rightHandle = document.createElement('div');
+            rightHandle.className = `trim-handle ${isSelected ? 'flex' : 'hidden'}`;
+            rightHandle.title = 'Arrastar para cortar fim';
+            this.attachTrimHandler(rightHandle, idx, 'right');
+
+            clipWrapper.appendChild(leftHandle);
+            clipWrapper.appendChild(centerBody);
+            clipWrapper.appendChild(rightHandle);
+
+            this.videoTrackContainer.appendChild(clipWrapper);
         });
 
         // Trilha de Áudio Master
@@ -929,7 +978,56 @@ class OpenCutCapCutEngine {
         }
     }
 
-    // Agente 20: Offline Video Export 4K 60FPS
+    // Manipulador de Gestos de Trim nas Alças Amarelas
+    attachTrimHandler(handleEl, clipIndex, side) {
+        let startX = 0;
+        let initialDuration = 0;
+        let initialOffset = 0;
+
+        const onTouchStart = (e) => {
+            e.stopPropagation();
+            this.pushUndoState();
+            const clip = this.clips[clipIndex];
+            startX = e.touches ? e.touches[0].clientX : e.clientX;
+            initialDuration = clip.duration;
+            initialOffset = clip.startOffset;
+            this.triggerHaptic('SNAP');
+        };
+
+        const onTouchMove = (e) => {
+            e.stopPropagation();
+            const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+            const deltaX = currentX - startX;
+            // 40 pixels de arrasto = 1 segundo de corte
+            const deltaSec = deltaX / 40;
+            const clip = this.clips[clipIndex];
+
+            if (side === 'right') {
+                const newDuration = Math.max(0.3, initialDuration + deltaSec);
+                clip.duration = newDuration;
+            } else if (side === 'left') {
+                const newDuration = Math.max(0.3, initialDuration - deltaSec);
+                const newOffset = Math.max(0, initialOffset + deltaSec);
+                clip.duration = newDuration;
+                clip.startOffset = newOffset;
+            }
+
+            this.recalcTimeline();
+            this.seekTo(clip.timelineStart);
+        };
+
+        const onTouchEnd = (e) => {
+            e.stopPropagation();
+            this.triggerHaptic('CUT');
+            this.showToast(`Clipe ajustado para ${this.formatTime(this.clips[clipIndex].duration)}`);
+        };
+
+        handleEl.addEventListener('touchstart', onTouchStart, { passive: false });
+        handleEl.addEventListener('touchmove', onTouchMove, { passive: false });
+        handleEl.addEventListener('touchend', onTouchEnd, { passive: false });
+    }
+
+    // Offline Video Export 4K 60FPS
     async startExport(isShare = false) {
         if (this.clips.length === 0) return;
 
@@ -961,74 +1059,83 @@ class OpenCutCapCutEngine {
 
         recorder.onstop = async () => {
             const blob = new Blob(chunks, { type: 'video/mp4' });
+            const filename = `OpenCut_Pro_${Date.now()}.mp4`;
 
-            const reader = new FileReader();
-            reader.readAsDataURL(blob);
-            reader.onloadend = () => {
-                const base64data = reader.result;
-                const filename = `opencut_4k_${Date.now()}.mp4`;
-
-                if (isShare) {
-                    if (window.AndroidBridge) {
-                        window.AndroidBridge.shareVideo('Meu Vídeo OpenCut Pro', base64data);
-                    }
-                } else {
-                    if (window.AndroidBridge) {
-                        window.AndroidBridge.saveVideoToGallery(base64data, filename);
+            if (window.AndroidBridge && window.AndroidBridge.saveVideoToGallery) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64Data = reader.result.split(',')[1];
+                    if (isShare && window.AndroidBridge.shareVideo) {
+                        window.AndroidBridge.shareVideo(base64Data, filename);
                     } else {
-                        const a = document.createElement('a');
-                        a.href = URL.createObjectURL(blob);
-                        a.download = filename;
-                        a.click();
-                        this.showToast('Vídeo 4K exportado com sucesso!');
+                        window.AndroidBridge.saveVideoToGallery(base64Data, filename);
                     }
-                }
+                };
+                reader.readAsDataURL(blob);
+            } else {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename;
+                a.click();
+            }
 
-                this.exportModal.classList.add('hidden');
-                this.exportModal.classList.remove('flex');
-                this.exportOptionsBox.classList.remove('hidden');
-                this.exportProgressBox.classList.add('hidden');
-                this.btnConfirmExport.disabled = false;
-                this.btnShareNative.disabled = false;
-
-                if (window.AndroidBridge && window.AndroidBridge.setKeepScreenOn) {
-                    window.AndroidBridge.setKeepScreenOn(false);
-                }
-            };
+            this.showToast('Vídeo salvo na Galeria com sucesso!');
+            this.exportModal.classList.add('hidden');
+            this.exportModal.classList.remove('flex');
+            if (window.AndroidBridge && window.AndroidBridge.setKeepScreenOn) {
+                window.AndroidBridge.setKeepScreenOn(false);
+            }
         };
 
         recorder.start();
 
-        const step = 0.04;
-        let exportTime = 0;
-        const startTimeMs = performance.now();
+        const stepTime = 0.05;
+        let exportCurrentTime = 0;
+        const totalDuration = this.totalDuration;
+        const startTime = Date.now();
 
         const renderStep = () => {
-            if (exportTime <= this.totalDuration) {
-                this.seekTo(exportTime);
-                const progress = Math.min(100, Math.round((exportTime / this.totalDuration) * 100));
+            if (exportCurrentTime <= totalDuration) {
+                this.seekTo(exportCurrentTime);
+                const progress = Math.round((exportCurrentTime / totalDuration) * 100);
                 this.exportProgressBar.style.width = `${progress}%`;
                 this.exportProgressText.textContent = `${progress}%`;
 
-                const elapsedMs = performance.now() - startTimeMs;
-                if (progress > 5) {
-                    const totalEstimatedMs = (elapsedMs / progress) * 100;
-                    const remainingSecs = Math.max(0, Math.round((totalEstimatedMs - elapsedMs) / 1000));
-                    this.exportEtaText.textContent = `Tempo restante estimado: ~${remainingSecs}s`;
-                }
+                const elapsed = (Date.now() - startTime) / 1000;
+                const estimatedTotal = (elapsed / (exportCurrentTime || 0.01)) * totalDuration;
+                const remaining = Math.max(0, Math.round(estimatedTotal - elapsed));
+                this.exportEtaText.textContent = `Tempo restante: ~${remaining}s`;
 
-                exportTime += step;
+                exportCurrentTime += stepTime;
                 requestAnimationFrame(renderStep);
             } else {
-                this.exportStatusLabel.textContent = 'Gravando arquivo 4K na galeria...';
                 recorder.stop();
             }
         };
 
         renderStep();
     }
+
+    triggerHaptic(type) {
+        if (window.AndroidBridge && window.AndroidBridge.triggerHaptic) {
+            window.AndroidBridge.triggerHaptic(type);
+        }
+    }
+
+    showToast(message) {
+        if (window.AndroidBridge && window.AndroidBridge.showToast) {
+            window.AndroidBridge.showToast(message);
+        }
+    }
+
+    formatTime(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        const ms = Math.floor((seconds % 1) * 10);
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms}`;
+    }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    window.openCutApp = new OpenCutCapCutEngine();
+    window.openCutEngine = new OpenCutCapCutEngine();
 });
